@@ -28,6 +28,21 @@ class I1ContractTests(unittest.TestCase):
         self.assertEqual(trace, expected)
         self.assertEqual(run.output, (FIXTURE / "complete.patch").read_text(encoding="utf-8"))
 
+    def test_pagination_stops_when_strong_candidate_still_fails(self):
+        run = run_demo(scenario="strong-failure")
+
+        self.assertEqual(run.status, "failed")
+        self.assertIsNone(run.output)
+        self.assertEqual(
+            [(attempt.role, attempt.decision, attempt.reason) for attempt in run.attempts],
+            [
+                ("fast", "retry", "fast_attempts_remaining"),
+                ("fast", "escalate", "repeated_failure"),
+                ("strong", "stop", "strong_verification_failed"),
+            ],
+        )
+        self.assertEqual(run.attempts[-1].check.kind, "test_failed")
+
     def test_verifier_environment_error_stops_without_escalating(self):
         fast = Mock(return_value=ModelReply("fast", "patch"))
         strong = Mock()

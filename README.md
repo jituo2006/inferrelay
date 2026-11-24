@@ -17,6 +17,8 @@ python3 -m unittest discover -s tests -v
 
 I1 的分页修复示例使用本地 Git 和 Python。在项目根目录运行 `python3 -m examples.pagination.demo`，可查看两份预设补丁经过真实测试后产生的重试、升级和接受记录。接口及示例说明见 [I1 共享接口与分页修复示例](docs/i1-contract.md)。
 
+运行 `python3 -m examples.pagination.demo --scenario strong-failure` 可查看升级后仍未通过验证而停止的记录。命令以退出码 1 表示未通过。
+
 ## 模块接口
 
 | 模块 | 输入与输出 |

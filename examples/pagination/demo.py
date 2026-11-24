@@ -1,5 +1,6 @@
 """Run the scheduler against the two bundled pagination patches."""
 
+import argparse
 from dataclasses import asdict
 from functools import partial
 import json
@@ -80,21 +81,29 @@ def fixture_model(name: str, filename: str) -> Model:
     return generate
 
 
-def run_demo() -> Run:
+def run_demo(*, scenario: str = "success") -> Run:
+    if scenario not in ("success", "strong-failure"):
+        raise ValueError(f"Unknown scenario: {scenario}")
     task = load_task()
     return run_task(
         task,
         router=ThresholdRouter(0.7),
         models={
             "fast": fixture_model("fixture-fast", "partial.patch"),
-            "strong": fixture_model("fixture-strong", "complete.patch"),
+            "strong": fixture_model(
+                "fixture-strong",
+                "partial.patch" if scenario == "strong-failure" else "complete.patch",
+            ),
         },
         verify=partial(verify_fixture, task),
     )
 
 
 def main() -> int:
-    result = run_demo()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--scenario", choices=("success", "strong-failure"), default="success")
+    args = parser.parse_args()
+    result = run_demo(scenario=args.scenario)
     print(json.dumps(asdict(result), indent=2))
     return 0 if result.status == "passed" else 1
 

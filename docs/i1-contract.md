@@ -46,4 +46,6 @@ flowchart LR
 
 在项目根目录运行 `python3 -m examples.pagination.demo`。快模型使用 `partial.patch` 修复偏移，真实检查仍报告 `test_invalid_page` 和 `test_invalid_page_size`。第二轮快模型使用同一份补丁，调度器据重复失败升级。强模型使用 `complete.patch`，全部检查通过。`examples/pagination/expected_trace.json` 保存可比较的预期轨迹。
 
+运行 `python3 -m examples.pagination.demo --scenario strong-failure` 可查看停止路径：强模型也返回未通过检查的 `partial.patch`，最后一轮记录 `stop` 和 `strong_verification_failed`，`Run.status` 为 `failed` 且不返回补丁。此命令以退出码 1 表示任务未通过。
+
 运行 `python3 -m unittest discover -s tests -v` 可验证该轨迹和原型的其他行为。组员可以按表中接口替换各自的实现，再由负责人对共享样例做集成验收。
