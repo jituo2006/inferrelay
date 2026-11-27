@@ -1,4 +1,5 @@
 import json
+from subprocess import TimeoutExpired
 import unittest
 from unittest.mock import Mock
 
@@ -60,6 +61,28 @@ class I1ContractTests(unittest.TestCase):
         self.assertIsNone(run.output)
         fast.assert_called_once()
         strong.assert_not_called()
+
+    def test_verifier_execution_failures_return_a_recorded_stop(self):
+        for error in (OSError("runner missing"), TimeoutExpired("check", 10)):
+            with self.subTest(error=type(error).__name__):
+                fast = Mock(return_value=ModelReply("fast", "patch"))
+                strong = Mock()
+                verify = Mock(side_effect=error)
+
+                run = run_task(
+                    load_task(), router=ThresholdRouter(0.7),
+                    models={"fast": fast, "strong": strong}, verify=verify,
+                )
+
+                self.assertEqual(run.status, "verification_error")
+                self.assertIsNone(run.output)
+                self.assertEqual(len(run.attempts), 1)
+                self.assertEqual(run.attempts[0].decision, "stop")
+                self.assertEqual(run.attempts[0].reason, "verification_environment_error")
+                self.assertEqual(run.attempts[0].check.kind, "environment_error")
+                self.assertEqual(run.attempts[0].check.code, "verifier_execution_error")
+                verify.assert_called_once_with("patch")
+                strong.assert_not_called()
 
 
 if __name__ == "__main__":

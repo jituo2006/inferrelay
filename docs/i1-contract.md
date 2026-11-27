@@ -38,6 +38,8 @@ flowchart LR
 | `test_failed` | 检查已执行，候选未满足要求。 | 快模型可重试或升级，强模型失败后停止。 |
 | `environment_error` | 验证工具或环境无法执行检查。 | 停止并返回 `verification_error`。 |
 
+验证器直接抛出 `OSError` 或 `subprocess.SubprocessError` 时，调度器也会记录一轮 `environment_error` 检查结果并停止，避免丢失 `Run` 轨迹。验证器仍应尽可能将已知失败转换为明确的 `Check`。
+
 在快模型仍有尝试次数时，反馈策略比较相邻两次失败的 `(kind, code)`。测试失败的 `code` 可由排序后的测试标识组成。`summary` 用来帮助模型修订，可以描述预期结果和实际问题。
 
 ## 分页样例与验收

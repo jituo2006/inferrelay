@@ -41,6 +41,41 @@ class SchedulerTests(unittest.TestCase):
         self.assertEqual(run.attempts[2].reason, "fast_attempt_limit")
         self.assertEqual(run.status, "passed")
 
+    def test_one_fast_attempt_escalates_with_verification_feedback(self):
+        fast = Mock(return_value=ModelReply("fast", "[7, 4]"))
+        strong = Mock(return_value=ModelReply("strong", "[7, 4, 1]"))
+
+        run = run_task(
+            Task("Return the Python range output as JSON.", 0.25),
+            router=ThresholdRouter(0.7),
+            models={"fast": fast, "strong": strong},
+            verify=verify_range_output,
+            max_fast_attempts=1,
+        )
+
+        self.assertEqual(run.status, "passed")
+        self.assertEqual([a.decision for a in run.attempts], ["escalate", "accept"])
+        self.assertEqual(run.attempts[0].reason, "fast_attempt_limit")
+        self.assertEqual(strong.call_args.args[1], Feedback("[7, 4]", run.attempts[0].check))
+
+    def test_truncated_candidate_retries_then_escalates_without_verification(self):
+        fast = Mock(return_value=ModelReply("fast", "partial", finish_reason="length"))
+        strong = Mock(return_value=ModelReply("strong", "[7, 4, 1]"))
+        verify = Mock(wraps=verify_range_output)
+
+        run = run_task(
+            Task("Return the Python range output as JSON.", 0.25),
+            router=ThresholdRouter(0.7),
+            models={"fast": fast, "strong": strong}, verify=verify,
+        )
+
+        self.assertEqual(run.status, "passed")
+        self.assertEqual([a.decision for a in run.attempts], ["retry", "escalate", "accept"])
+        self.assertEqual(run.attempts[0].check.kind, "candidate_error")
+        self.assertEqual(run.attempts[1].reason, "repeated_failure")
+        verify.assert_called_once_with("[7, 4, 1]")
+        self.assertEqual(strong.call_args.args[1].check, run.attempts[1].check)
+
     def test_different_candidate_failures_allow_another_fast_attempt(self):
         fast = Mock(side_effect=[
             ModelReply("fast", "[7]"),
