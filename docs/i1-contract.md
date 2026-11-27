@@ -38,6 +38,8 @@ flowchart LR
 | `test_failed` | 检查已执行，候选未满足要求。 | 快模型可重试或升级，强模型失败后停止。 |
 | `environment_error` | 验证工具或环境无法执行检查。 | 停止并返回 `verification_error`。 |
 
+验证器直接抛出 `OSError` 或 `subprocess.SubprocessError` 时，调度器也会记录一轮 `environment_error` 检查结果并停止，避免丢失 `Run` 轨迹。验证器仍应尽可能将已知失败转换为明确的 `Check`。
+
 在快模型仍有尝试次数时，反馈策略比较相邻两次失败的 `(kind, code)`。测试失败的 `code` 可由排序后的测试标识组成。`summary` 用来帮助模型修订，可以描述预期结果和实际问题。
 
 ## 分页样例与验收
@@ -45,5 +47,7 @@ flowchart LR
 `paginate(items, page, page_size)` 使用从 1 开始的页码，允许末页不足一页，越界页返回空列表，`page` 或 `page_size` 小于 1 时抛出 `ValueError`。基线同时存在偏移错误和参数校验缺失。
 
 在项目根目录运行 `python3 -m examples.pagination.demo`。快模型使用 `partial.patch` 修复偏移，真实检查仍报告 `test_invalid_page` 和 `test_invalid_page_size`。第二轮快模型使用同一份补丁，调度器据重复失败升级。强模型使用 `complete.patch`，全部检查通过。`examples/pagination/expected_trace.json` 保存可比较的预期轨迹。
+
+运行 `python3 -m examples.pagination.demo --scenario strong-failure` 可查看停止路径：强模型也返回未通过检查的 `partial.patch`，最后一轮记录 `stop` 和 `strong_verification_failed`，`Run.status` 为 `failed` 且不返回补丁。此命令以退出码 1 表示任务未通过。
 
 运行 `python3 -m unittest discover -s tests -v` 可验证该轨迹和原型的其他行为。组员可以按表中接口替换各自的实现，再由负责人对共享样例做集成验收。

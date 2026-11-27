@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from subprocess import SubprocessError
 from time import perf_counter
 from typing import Callable, Mapping
 
@@ -93,7 +94,14 @@ def run_task(
                 kind="candidate_error",
             )
         else:
-            check = verify(reply.text)
+            try:
+                check = verify(reply.text)
+            except (OSError, SubprocessError) as error:
+                check = Check(
+                    False, "verifier_execution_error",
+                    f"The verifier could not complete: {error}",
+                    kind="environment_error",
+                )
 
         if role == "fast":
             fast_attempts += 1
