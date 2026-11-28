@@ -32,6 +32,7 @@ class Route:
     model: Role
     score: float
     threshold: float
+    reason: str | None = None
 
 
 @dataclass(frozen=True)

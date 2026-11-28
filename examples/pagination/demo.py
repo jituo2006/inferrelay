@@ -1,5 +1,6 @@
 """Run the scheduler against the two bundled pagination patches."""
 
+import argparse
 from dataclasses import asdict
 from functools import partial
 import json
@@ -10,7 +11,7 @@ import sys
 from tempfile import TemporaryDirectory
 
 from hybrid_inference.contracts import Check, Feedback, Model, ModelReply, Run, SourceFile, Task
-from hybrid_inference.core import ThresholdRouter, run_task
+from hybrid_inference.core import CodingTaskRouter, run_task
 
 
 FIXTURE = Path(__file__).resolve().parent
@@ -80,11 +81,11 @@ def fixture_model(name: str, filename: str) -> Model:
     return generate
 
 
-def run_demo() -> Run:
+def run_demo(*, threshold: float = 0.7) -> Run:
     task = load_task()
     return run_task(
         task,
-        router=ThresholdRouter(0.7),
+        router=CodingTaskRouter(threshold),
         models={
             "fast": fixture_model("fixture-fast", "partial.patch"),
             "strong": fixture_model("fixture-strong", "complete.patch"),
@@ -94,7 +95,12 @@ def run_demo() -> Run:
 
 
 def main() -> int:
-    result = run_demo()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--threshold", type=float, default=0.7, help="Minimum score for a strong start.")
+    args = parser.parse_args()
+    if not 0 <= args.threshold <= 1:
+        parser.error("--threshold must be between 0 and 1")
+    result = run_demo(threshold=args.threshold)
     print(json.dumps(asdict(result), indent=2))
     return 0 if result.status == "passed" else 1
 
