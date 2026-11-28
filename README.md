@@ -17,6 +17,8 @@ python3 -m unittest discover -s tests -v
 
 I1 的分页修复示例使用本地 Git 和 Python。在项目根目录运行 `python3 -m examples.pagination.demo`，可查看快模型首轮生成、重试、升级到强模型并通过的轨迹。运行 `python3 -m examples.pagination.demo --threshold 0.25`，同一份任务则直接由强模型生成并通过。接口及示例说明见 [I1 共享接口与分页修复示例](docs/i1-contract.md)。
 
+模型适配的离线验收：运行 `python3 -m examples.pagination.model_adapter_demo`，通过本地模拟 API 验证样例源码、预设 Feedback 和补丁输出。该演示不调用真实模型；验收步骤与联调边界见 [模型适配验收说明](docs/model-adapter.md)。
+
 ## 模块接口
 
 | 模块 | 输入与输出 |
@@ -27,6 +29,16 @@ I1 的分页修复示例使用本地 Git 和 Python。在项目根目录运行 `
 | 调度 | `run_task(...) → Run`。记录初始路由、每轮验证和决策、模型调用耗时及总耗时。模型服务故障和验证环境故障分别以 `model_error` 和 `verification_error` 结束。 |
 
 ## 接入模型 API
+
+### 只调用 DeepSeek 4.1 Flash
+
+在仓库根目录运行 `python3 -m examples.pagination.deepseek_demo`（Windows：`py -3.11 -m examples.pagination.deepseek_demo`），按提示输入 API Key，输入不回显、不保存到文件。无需配置快、强模型变量。
+
+此入口固定使用 `https://api.deepseek.com` 和 `deepseek-flash`，对分页样例发起两次真实请求：首轮源码调用，以及携带预设 Feedback 的调用。真实调用可能收费；输出候选补丁和元数据，但不会执行或判定模型补丁是否通过。可选的 `DEEPSEEK_API_KEY` 环境变量可代替交互输入。
+
+这是模型适配的单模型联调入口，不改变项目的双模型路由和调度。
+
+### 通用双模型配置
 
 在本机环境中设置下面的变量，再运行 `python3 -m hybrid_inference --backend api`。Base URL 填到接口前缀，例如供应商要求的 `https://<host>/v1`，程序会追加 `/chat/completions`。
 
